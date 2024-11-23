@@ -1,0 +1,4 @@
+pyyaml
+requests
+python-socketio
+websocket-client
