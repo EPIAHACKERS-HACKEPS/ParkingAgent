@@ -1,7 +1,8 @@
 import platform
 import sys
+import os
 
-IS_RASPBERRY = platform.machine().startswith("arm") and "raspberrypi" in platform.uname().nodename
+IS_RASPBERRY = platform.machine().startswith("arm") and "raspberrypi" in os.uname().nodename
 
 if IS_RASPBERRY:
     import RPi.GPIO as GPIO #pip install python3-rpi.gpio
