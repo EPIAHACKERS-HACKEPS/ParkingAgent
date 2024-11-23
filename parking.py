@@ -8,7 +8,8 @@ import yaml
 import socketio
 
 IS_RASPBERRY = platform.machine().startswith("arm") and "raspberrypi" in os.uname().nodename
-DEFAULT_HOST = "localhost:5000"
+DEFAULT_HOST = "hackeps.ddns.net/backend"
+DEFAULT_HTTPS = True
 
 if IS_RASPBERRY:
     import RPi.GPIO as GPIO #pip install python3-rpi.gpio
@@ -18,7 +19,7 @@ else:
 
 class ParkingSocket:
     
-    def __init__(self, parkingId:str, host=DEFAULT_HOST, httpsMode=False, retry_timeout=10):
+    def __init__(self, parkingId:str, host=DEFAULT_HOST, httpsMode=DEFAULT_HOST, retry_timeout=10):
         self.sio = socketio.Client()
         self.parkingId = parkingId
         self.host = f"ws{'s' if httpsMode else ''}://{host}/socket"
@@ -86,7 +87,7 @@ class Parking:
         
         self.writeConf()
         
-        self.socket = ParkingSocket(self.conf.get('parkingId'), self.conf.get("host", DEFAULT_HOST), self.conf.get("https", False), retry_timeout=retry_timeout)
+        self.socket = ParkingSocket(self.conf.get('parkingId'), self.conf.get("host", DEFAULT_HOST), self.conf.get("https", DEFAULT_HTTPS), retry_timeout=retry_timeout)
                   
         threading.Thread(target=self.socket.connect).start()
                         
@@ -105,7 +106,7 @@ class Parking:
         parkingId = self.conf.get("parkingId")
         host = self.conf.get("host", DEFAULT_HOST)
         
-        httpsMode = self.conf.get("https", False)
+        httpsMode = self.conf.get("https", DEFAULT_HTTPS)
         
         url = f"http{'s' if httpsMode else ''}://{host}/api/v1/parking/{parkingId}"
                   
