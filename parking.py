@@ -9,6 +9,7 @@ import time
 import requests
 import yaml
 import socketio
+import argparse
 
 IS_RASPBERRY = (platform.machine().startswith("arm") or platform.machine().startswith("aarch")) and ("raspberrypi" in os.uname().nodename or "rpi6" in os.uname().nodename)
 DEFAULT_HOST = "hackeps.ddns.net/backend"
@@ -90,7 +91,7 @@ class Parking:
     def __init__(self, confPath="conf.yaml", BEAM_IN_PIN=17, BEAM_OUT_PIN=27, SIMULATED_IN_KEY="space", SIMULATED_OUT_KEY="enter", retry_timeout=10):
         self.confPath = confPath
         self.conf = {}
-        
+                
         self.BEAM_IN_PIN = BEAM_IN_PIN
         self.BEAM_OUT_PIN = BEAM_OUT_PIN
         self.SIMULATED_IN_KEY = SIMULATED_IN_KEY
@@ -218,5 +219,15 @@ class Parking:
                 
             self.socket.stop()
                 
-parking = Parking()
+parser = argparse.ArgumentParser(description="Parking Module")
+parser.add_argument('--conf', type=str, required=False, default='conf.yaml', help="Archivo de configuración.")
+parser.add_argument('--beam-in-pin', type=int, required=False, default=17, help="Pin del sensor de entrada.")
+parser.add_argument('--beam-out-pin', type=int, required=False, default=27, help="Pin del sensor de salida.")
+parser.add_argument('--simulated-in-key', type=str, required=False, default='space', help="Tecla para simular sensor de entrada.")
+parser.add_argument('--simulated-out-key', type=str, required=False, default='enter', help="Tecla para simular sensor de salida.")
+parser.add_argument('--retry-timeout', type=int, required=False, default=10, help="Tiempo de espera entre reintentos.")
+
+args = parser.parse_args()
+                
+parking = Parking(confPath=args.conf, BEAM_IN_PIN=args.beam_in_pin, BEAM_OUT_PIN=args.beam_out_pin, SIMULATED_IN_KEY=args.simulated_in_key, SIMULATED_OUT_KEY=args.simulated_out_key, retry_timeout=args.retry_timeout)
 parking.start()
