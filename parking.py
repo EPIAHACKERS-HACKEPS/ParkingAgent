@@ -1,3 +1,6 @@
+import base64
+import hashlib
+import hmac
 import platform
 import sys
 import os
@@ -16,12 +19,23 @@ if IS_RASPBERRY:
 else:
     import keyboard  #pip install keyboard
 
+def generate_hmac_signature(client_id, secret_key:str, timestamp, data):
+    message = f"{client_id}{timestamp}{data}"
+    signature = hmac.new(secret_key.encode(), message.encode(), hashlib.sha256).digest()
+    signature_base64 = base64.b64encode(signature).decode()
+    return signature_base64
+
+def generate_auth_header(client_id, secret_key, data):
+    timestamp = int(time.time())
+    signature = generate_hmac_signature(client_id, secret_key, timestamp, data)
+    return f"hmac {client_id}:{signature}:{timestamp}"
 
 class ParkingSocket:
     
-    def __init__(self, parkingId:str, host=DEFAULT_HOST, httpsMode=DEFAULT_HOST, retry_timeout=10):
+    def __init__(self, parkingId:str, secret, host=DEFAULT_HOST, httpsMode=DEFAULT_HOST, retry_timeout=10):
         self.sio = socketio.Client()
         self.parkingId = parkingId
+        self.secret = secret
         self.host = f"ws{'s' if httpsMode else ''}://{host}/socket"
         self.register_events()
         self.retry_timeout = retry_timeout
@@ -32,12 +46,12 @@ class ParkingSocket:
         @self.sio.on('connect', namespace='/socket')
         def connect():
             print("Conexión establecida con el servidor en /socket")
-            self.sio.emit("status_parking", {"status": "online", "parkingId": self.parkingId}, namespace="/socket")
+            self.sio.emit("status_parking", {"status": "online", "Authorization": generate_auth_header(self.parkingId, self.secret, "status_parking")}, namespace="/socket")
 
         @self.sio.on('disconnect', namespace='/socket')
         def disconnect():
             print("Desconectado del servidor")
-            self.sio.emit("status_parking", {"status": "offline", "parkingId": self.parkingId}, namespace="/socket")
+            self.sio.emit("status_parking", {"status": "offline", "parkingId": self.parkingId, "Authorization": generate_auth_header(self.parkingId, self.secret, "status_parking")}, namespace="/socket")
 
         @self.sio.on('connect_error', namespace='/socket')
         def connect_error(data):
@@ -65,7 +79,7 @@ class ParkingSocket:
         self.running = False
             
     def emitChange(self, occupation):
-        self.sio.emit("change_parking", {"parkingId": self.parkingId, "occupation": occupation}, namespace="/socket")
+        self.sio.emit("change_parking", {"parkingId": self.parkingId, "occupation": occupation, "Authorization": generate_auth_header(self.parkingId, self.secret, "change_parking")}, namespace="/socket")
 
 class Parking:
     
@@ -87,7 +101,7 @@ class Parking:
         
         self.writeConf()
         
-        self.socket = ParkingSocket(self.conf.get('parkingId'), self.conf.get("host", DEFAULT_HOST), self.conf.get("https", DEFAULT_HTTPS), retry_timeout=retry_timeout)
+        self.socket = ParkingSocket(self.conf.get('parkingId'), self.conf.get('secret'), self.conf.get("host", DEFAULT_HOST), self.conf.get("https", DEFAULT_HTTPS), retry_timeout=retry_timeout)
                   
         threading.Thread(target=self.socket.connect).start()
                         
