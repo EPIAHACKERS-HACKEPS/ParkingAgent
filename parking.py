@@ -10,7 +10,7 @@ import requests
 import yaml
 import socketio
 
-IS_RASPBERRY = platform.machine().startswith("arm") and "raspberrypi" in os.uname().nodename
+IS_RASPBERRY = (platform.machine().startswith("arm") or platform.machine().startswith("aarch")) and ("raspberrypi" in os.uname().nodename or "rpi6" in os.uname().nodename)
 DEFAULT_HOST = "hackeps.ddns.net/backend"
 DEFAULT_HTTPS = True
 
@@ -56,6 +56,10 @@ class ParkingSocket:
         @self.sio.on('connect_error', namespace='/socket')
         def connect_error(data):
             print("Error al conectar:", data)
+            
+        @self.sio.on('error', namespace='/socket')
+        def error(data):
+            print("Error:", data)
 
     def connect(self):
         while self.running:
@@ -83,7 +87,7 @@ class ParkingSocket:
 
 class Parking:
     
-    def __init__(self, confPath="conf.yaml", BEAM_IN_PIN=17, BEAM_OUT_PIN=18, SIMULATED_IN_KEY="space", SIMULATED_OUT_KEY="enter", retry_timeout=10):
+    def __init__(self, confPath="conf.yaml", BEAM_IN_PIN=17, BEAM_OUT_PIN=27, SIMULATED_IN_KEY="space", SIMULATED_OUT_KEY="enter", retry_timeout=10):
         self.confPath = confPath
         self.conf = {}
         
